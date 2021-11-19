@@ -9,9 +9,11 @@ namespace Physics
     public class Particle
     {
         public Color Color { get; protected set; }
-        public double Weight { get; protected set; }
+        private double weight;
+        public double Weight { get { return weight * Density; } protected set { weight = value; } }
         public double Fluidity { get; protected set; }
         public Tile Tile { get; set; }
+        public int Density { get; protected set; } = 1;
         public double SpeedX { get; set; }
         public double SpeedY { get; set; }
         public double InertiaX { get; protected set; }
@@ -22,71 +24,141 @@ namespace Physics
             Tile = tile;
         }
 
-        public void Shift(Field field)
+        public void DefineMoving(ref Stack<Particle> activeParticles)
         {
-            while (Math.Abs(InertiaX) > 1 || Math.Abs(InertiaY) > 1)
+            if (Math.Abs(InertiaX) > 1 || Math.Abs(InertiaY) > 1)
             {
-                Point shift = new Point(Math.Sign((int)InertiaX), Math.Sign((int)InertiaY));
-                InertiaX -= shift.X;
-                InertiaY -= shift.Y;
-                TryShift(shift);
+                activeParticles.Push(this);
             }
+        }
+        public void Shift(Stack<Particle> activeParticles, Field field)
+        {
+            Point shift = new Point(Math.Sign((int)InertiaX), Math.Sign((int)InertiaY));
+            InertiaX -= shift.X;
+            InertiaY -= shift.Y;
+            TryShift(shift);
 
             void TryShift(Point shift)
             {
-                Tile newTile = field.Tiles[Tile.X + shift.X, Tile.Y + shift.Y];
-                if (!newTile.IsWall)
+                Tile nextTile = field.Tiles[Tile.X + shift.X, Tile.Y + shift.Y];
+                if (!nextTile.IsWall)
                 {
-                    if (newTile.Particle == null)
+                    if (nextTile.Particle != null)
                     {
-                        Tile.Particle = null;
-                        Tile = newTile;
-                        newTile.Particle = this;
-                    }
-                    else
-                    {
-                        Particle other = newTile.Particle;
-                        if (newTile.Particle.Weight >= Weight)
+                        Particle other = nextTile.Particle;
+                        if (false && other.GetType() == this.GetType() && (Math.Max(Math.Abs(SpeedX - other.SpeedX), Math.Abs(SpeedY - other.SpeedY)) > 20 * other.Density))
                         {
-                            other.SpeedX += SpeedX * (Weight/other.Weight) * 0.5 * Math.Abs(shift.X);
-                            other.SpeedY += SpeedY * (Weight / other.Weight) * 0.5 * Math.Abs(shift.Y);
-                            SpeedX *= shift.X == 0 ? 1 : 0.5;
-                            SpeedY *= shift.Y == 0 ? 1 : 0.5;
+                            other.Density++;
+                            Tile.Particle = null;
+                            Tile = null;
 
-                            SpeedX += shift.Y != 0 && Math.Abs(SpeedX) < 1 ? MyRandom.GetNumRange(Fluidity / 2, Fluidity) * MyRandom.GetNumRange(-1, 2) : 0;
+                            double impulseX = SpeedX * (Weight / other.Weight) * 0.5 * Math.Abs(shift.X);
+                            double impulseY = SpeedY * (Weight / other.Weight) * 0.5 * Math.Abs(shift.Y);
+                            other.SpeedX += impulseX;
+                            other.SpeedY += impulseY;
+
                             return;
                         }
                         else
                         {
-                            Tile.Particle = newTile.Particle;
-                            newTile.Particle.Tile = Tile;
-                            Tile = newTile;
-                            newTile.Particle = this;
-                            SpeedX *= shift.X == 0 ? 1 : (1 - other.Weight / Weight);
-                            SpeedY *= shift.Y == 0 ? 1 : (1 - other.Weight / Weight);
-                            other.SpeedX += shift.X == 0 ? 0 : 1 * (other.Weight / Weight);
-                            other.SpeedY += shift.Y == 0 ? 0 : 1 * (other.Weight / Weight);
+                            double impulseX = SpeedX * (Weight / other.Weight) * 0.5 * Math.Abs(shift.X);
+                            double impulseY = SpeedY * (Weight / other.Weight) * 0.5 * Math.Abs(shift.Y);
+                            other.SpeedX += impulseX;
+                            other.SpeedY += impulseY;
+                            SpeedX -= impulseX;
+                            SpeedY -= impulseY;
                         }
+                    }
+                    else
+                    {
+                        Tile.Particle = null;
+                        Tile = nextTile;
+                        nextTile.Particle = this;
                     }
                 }
                 else
                 {
-                    double elasticity = 0;
+                    double elasticity = 0.5 * (field.Tiles[Tile.X, Tile.Y + shift.Y].IsWall ? 1 : -1);
                     InertiaX *= shift.X == 0 ? 1 : elasticity;
-                    InertiaY *= shift.Y == 0 ? 1 : elasticity;
+                    InertiaY *= shift.Y == 0 ? 1 : -elasticity;
                     SpeedX *= shift.X == 0 ? 1 : elasticity;
-                    SpeedY *= shift.Y == 0 ? 1 : elasticity;
-                    return;
+                    SpeedY *= shift.Y == 0 ? 1 : -elasticity;
                 }
+
+                if (Math.Abs(InertiaX) > 1 || Math.Abs(InertiaY) > 1)
+                    activeParticles.Push(this);
             }
         }
 
+        public void TrySpread()
+        {
+            if (Density > 1)
+            {
+                int[] neigNums = MyRandom.GetMixedArray(new int[4] { 0, 1, 2, 3 });
+                for (int i = 0; i < 4; i++)
+                {
+                    Tile tile = Tile.Neigs[neigNums[i]];
+                    if (!tile.IsWall && tile.Particle == null)
+                    {
+                        Particle newPart = Create(this.GetType(), tile);
+                        tile.Particle = newPart;
+                        double k = ((Density - 1) / (double)Density);
+                        DoublePoint Speed = new DoublePoint(SpeedX * k, SpeedY * k);
+                        DoublePoint Inertia = new DoublePoint(InertiaX * k, InertiaY * k);
+                        newPart.SpeedX += Speed.X;
+                        newPart.SpeedY += Speed.Y;
+                        newPart.InertiaX += Inertia.X;
+                        newPart.InertiaY += Inertia.Y;
+                        SpeedX -= Speed.X;
+                        SpeedY -= Speed.Y;
+                        InertiaX -= Inertia.X;
+                        InertiaY -= Inertia.Y;
+                        Density--;
+                        return;
+                    }
+                }
+                /*for (int i = 0; i < 4; i++)
+                {
+                    Tile tile = Tile.Neigs[neigNums[i]];
+                    if (!tile.IsWall && tile.Particle != null)
+                    {
+                        tile.Particle.SpeedX += 0.2 * ((-neigNums[i] + 1) % 2) * 0.25 * Weight;
+                        tile.Particle.SpeedY += 0.2 * ((neigNums[i] - 2) % 2) * 0.25 * Weight;
+                    }
+                }*/
+                for (int i = 0; i < 4; i++)
+                {
+                    Tile tile = Tile.Neigs[neigNums[i]];
+                    if (!tile.IsWall && tile.Particle != null && tile.Particle.GetType() == GetType())
+                    {
+                        tile.Particle.Density++;
+                        Density--;
+                        break;
+                    }
+                }
+            }
+        }
         public void Move(Field field)
         {
             SpeedY += field.G;
             //SpeedX += MyRandom.GetNumRange(-3, 3d);
             InertiaX += SpeedX;
             InertiaY += SpeedY;
+        }
+
+        public static Particle Create(Type type, Tile tile)
+        {
+            Particle output;
+            if (type == typeof(Water))
+                output = new Water(tile);
+            else if (type == typeof(Sand))
+                output = new Sand(tile);
+            else if (type == typeof(Dirt))
+                output = new Dirt(tile);
+            else
+                throw new Exception();
+
+            return output;
         }
     }
 

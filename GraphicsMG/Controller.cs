@@ -35,11 +35,14 @@ namespace GraphicsMG
             if (mouseState.LeftButton == ButtonState.Pressed)
             {
                 Tile tile = GetTileUnderMouse(field);
-                Particle particle;
-                particle = new Dirt(tile);
-                particle.SpeedX = 0;
-                particle.SpeedY = 1;
-                tile.Particle = particle;
+                if (tile != null && !tile.IsWall && tile.Particle == null)
+                {
+                    Particle particle;
+                    particle = new Dirt(tile);
+                    particle.SpeedX = 0;
+                    particle.SpeedY = 0;
+                    tile.Particle = particle;
+                }
             }
         }
 
@@ -91,7 +94,7 @@ namespace GraphicsMG
             if (x >= 0 && x < field.Width && y >= 0 && y < field.Height)
                 return field.Tiles[x, y];
             else
-                return field.Tiles[1,1];
+                return null;
         }
     }
 }

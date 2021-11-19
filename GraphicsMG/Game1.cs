@@ -60,7 +60,7 @@ namespace GraphicsMG
             {
                 Field.Update();
 
-                ///*
+                /*
                 Tile tile = Field.Tiles[Field.Width / 2, Field.Height / 2];
                 Particle particle;
                 if (MyRandom.CheckChance(50))

@@ -47,23 +47,48 @@ namespace Physics
                             Tiles[x, y] = new Tile(x, y, false);
                     }
                 }
+
+                foreach(Tile tile in Tiles)
+                {
+                    if (!tile.IsEdge)
+                        tile.DefineNeigs(Tiles);
+                }
             }
         }
 
         public void Update()
         {
+            Stack<Particle> activeParticles = new Stack<Particle>();
+            Stack<Particle> activeParticlesNew = new Stack<Particle>();
+            foreach (Tile tile in Tiles)
+            {
+                if (tile.Particle != null)
+                {
+                    tile.Particle.DefineMoving(ref activeParticles);
+                }
+            }
+            while (activeParticles.Count > 0)
+            {
+                while (activeParticles.Count > 0)
+                {
+                    activeParticles.Pop().Shift(activeParticlesNew, this);
+                }
+
+                activeParticles = new Stack<Particle>(activeParticlesNew);
+                activeParticlesNew.Clear();
+            }
+            foreach (Tile tile in Tiles)
+            {
+                if (tile.Particle != null)
+                {
+                    tile.Particle.TrySpread();
+                }
+            }
             foreach (Tile tile in Tiles)
             {
                 if (tile.Particle != null)
                 {
                     tile.Particle.Move(this);
-                }
-            }
-            foreach (Tile tile in MyRandom.GetMixedArray(Tiles))
-            {
-                if (tile.Particle != null)
-                {
-                    tile.Particle.Shift(this);
                 }
             }
         }
