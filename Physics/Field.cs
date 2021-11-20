@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Physics
 {
@@ -10,6 +11,7 @@ namespace Physics
         readonly public int Width;
         readonly public int Height;
         readonly public Tile[,] Tiles;
+        readonly public Tile[] TilesArray;
         public double G { get; set; } = 1;
 
         public Field(int width, int height)
@@ -17,6 +19,7 @@ namespace Physics
             Width = width;
             Height = height;
             Tiles = new Tile[width, height];
+            TilesArray = new Tile[width * height];
             GenerateStartField();
         }
 
@@ -53,6 +56,11 @@ namespace Physics
                     if (!tile.IsEdge)
                         tile.DefineNeigs(Tiles);
                 }
+
+                foreach (Tile tile in Tiles)
+                {
+                    TilesArray[tile.X + tile.Y * Width] = tile;
+                }
             }
         }
 
@@ -60,7 +68,7 @@ namespace Physics
         {
             Stack<Particle> activeParticles = new Stack<Particle>();
             Stack<Particle> activeParticlesNew = new Stack<Particle>();
-            foreach (Tile tile in Tiles)
+            foreach (Tile tile in MyRandom.GetMixedArray(Tiles))
             {
                 if (tile.Particle != null)
                 {
@@ -91,6 +99,25 @@ namespace Physics
                     tile.Particle.Move(this);
                 }
             }
+            foreach (Tile tile in Tiles)
+            {
+                if (tile.Particle != null)
+                {
+                    tile.Particle.DoAction();
+                }
+            }
+            int totalTemp = 0;
+            foreach (Tile tile in Tiles)
+            {
+                if (tile.Particle != null)
+                    totalTemp += tile.Particle.Temperature;
+            }
+            foreach (Tile tile in Tiles)
+            {
+                if (tile.Particle != null)
+                    tile.Particle.SpreadTemperature();
+            }
+           
         }
     }
 

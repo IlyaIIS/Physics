@@ -20,6 +20,10 @@ namespace GraphicsMG
             {System.Drawing.Color.Blue, Color.Blue },
             {System.Drawing.Color.SandyBrown, Color.SandyBrown },
             {System.Drawing.Color.Tan, Color.Tan },
+            {System.Drawing.Color.Red, Color.Red },
+            {System.Drawing.Color.Orange, Color.DarkOrange },
+            {System.Drawing.Color.Gray, Color.Gray },
+            {System.Drawing.Color.LightGray, Color.LightGray },
         };
 
         static public void DrawLevel(SpriteBatch spriteBatch, Field field)
