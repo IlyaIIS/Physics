@@ -14,6 +14,7 @@ namespace Physics
         public double Fluidity { get; protected set; }
         public Tile Tile { get; set; }
         public int Density { get; protected set; } = 1;
+        public double Roughness { get; protected set; }
         public double SpeedX { get; set; }
         public double SpeedY { get; set; }
         public double InertiaX { get; protected set; }
@@ -46,7 +47,7 @@ namespace Physics
                     if (nextTile.Particle != null)
                     {
                         Particle other = nextTile.Particle;
-                        double k = Weight > other.Weight ? 1 : 2;
+                        double k = Weight > other.Weight ? 1 : 3;
                         if (other.GetType() != this.GetType() && shift.Y > 0 && Fluidity < other.Fluidity &&
                             40*k < (Math.Max(Math.Abs(SpeedX - other.SpeedX), Math.Abs(SpeedY - other.SpeedY)) * (Weight / other.Density) * (other.Fluidity / Fluidity)))
                         {
@@ -62,8 +63,8 @@ namespace Physics
                             nextTile.Particle = this;
                             Tile = nextTile;
 
-                            double impulseX = SpeedX * (Weight / other.Weight) * 0.5 * Math.Abs(shift.X);
-                            double impulseY = SpeedY * (Weight / other.Weight) * 0.5 * Math.Abs(shift.Y);
+                            double impulseX = SpeedX * (Weight / other.Weight) * other.Roughness * 2 * Math.Abs(shift.X);
+                            double impulseY = SpeedY * (Weight / other.Weight) * other.Roughness * 2 * Math.Abs(shift.Y);
                             other.SpeedX += impulseX;
                             other.SpeedY += impulseY;
                             SpeedX -= impulseX;
@@ -172,18 +173,37 @@ namespace Physics
         public void Move(Field field)
         {
             SpeedY += field.G;
-            Fall();
+            Fall(field);
+            Rub();
             InertiaX += SpeedX;
             InertiaY += SpeedY;
         }
-        private void Fall()
+        private void Fall(Field field)
         {
-            if (Tile.Neigs[3].Particle != null)
+            if (Math.Abs(SpeedX) < 2)
+                if (Tile.Neigs[3].Particle != null)
+                {
+                    if (Tile.Neigs[0].Particle == null)
+                        SpeedX += (Fluidity + MyRandom.GetNum0(Fluidity))*field.G;
+                    if (Tile.Neigs[2].Particle == null)
+                        SpeedX -= (Fluidity + MyRandom.GetNum0(Fluidity))*field.G;
+                }
+        }
+        private void Rub()
+        {
+            for (int i = 0; i < 4; i++)
             {
-                if (Tile.Neigs[0].Particle == null)
-                    SpeedX += Fluidity;
-                if (Tile.Neigs[2].Particle == null)
-                    SpeedX -= Fluidity;
+                Tile tile = Tile.Neigs[i];
+                Particle other = tile.Particle;
+                if (other != null)
+                {
+                    double k = 0.25 * other.Roughness;
+                    DoublePoint Impulse = new DoublePoint(SpeedX * k, SpeedY * k);
+                    other.SpeedX += Impulse.X;
+                    other.SpeedY += Impulse.Y;
+                    SpeedX -= Impulse.X;
+                    SpeedY -= Impulse.Y;
+                }
             }
         }
 
@@ -210,6 +230,7 @@ namespace Physics
             Color = Color.Blue;
             Weight = 1;
             Fluidity = 3;
+            Roughness = 0.1;
         }
     }
     public class Sand : Particle
@@ -219,6 +240,7 @@ namespace Physics
             Color = Color.Tan;
             Weight = 2;
             Fluidity = 0.3;
+            Roughness = 0.3;
         }
     }
     public class Dirt : Particle
@@ -228,6 +250,7 @@ namespace Physics
             Color = Color.SandyBrown;
             Weight = 2;
             Fluidity = 0.05;
+            Roughness = 0.5;
         }
     }
 }

@@ -77,13 +77,13 @@ namespace Physics
                 activeParticles = new Stack<Particle>(activeParticlesNew);
                 activeParticlesNew.Clear();
             }
-            foreach (Tile tile in Tiles)
+            /*foreach (Tile tile in Tiles)
             {
                 if (tile.Particle != null)
                 {
                     tile.Particle.TrySpread();
                 }
-            }
+            }*/
             foreach (Tile tile in Tiles)
             {
                 if (tile.Particle != null)

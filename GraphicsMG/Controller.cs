@@ -18,6 +18,7 @@ namespace GraphicsMG
             { Keys.Q, false},
             { Keys.E, false},
             { Keys.R, false},
+            { Keys.G, false},
         };
         static bool wasLeftPressed = false;
 
@@ -29,6 +30,7 @@ namespace GraphicsMG
             CheckCamMove();
             CheckCamZoom();
             CheckMouseActions(field);
+            PerformKeyActions(field);
         }
         static void CheckMouseActions(Field field)
         {
@@ -38,7 +40,7 @@ namespace GraphicsMG
                 if (tile != null && !tile.IsWall && tile.Particle == null)
                 {
                     Particle particle;
-                    particle = new Sand(tile);
+                    particle = new Water(tile);
                     particle.SpeedX = 0;
                     particle.SpeedY = 0;
                     tile.Particle = particle;
@@ -50,12 +52,16 @@ namespace GraphicsMG
                 if (tile != null && !tile.IsWall && tile.Particle == null)
                 {
                     Particle particle;
-                    particle = new Dirt(tile);
+                    particle = new Sand(tile);
                     particle.SpeedX = 0;
                     particle.SpeedY = 0;
                     tile.Particle = particle;
                 }
             }
+        }
+        static void PerformKeyActions(Field field)
+        {
+            DoActionIfKeyReleased(Keys.G, () => { field.G = field.G == 0 ? 1: 0 ; });
         }
 
         static void DoActionIfKeyReleased(Keys key, Action Action)

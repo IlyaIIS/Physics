@@ -56,7 +56,7 @@ namespace GraphicsMG
             MouseState mouse = Mouse.GetState();
             //Tile tile = Field.GetTileFromCoord(mouse.X + Controller.Cam.Pos.X - Controller.Cam.ViewportWidth / 2, mouse.Y + Controller.Cam.Pos.Y - Controller.Cam.ViewportHeight / 2);
 
-            if (gameTime.TotalGameTime.Ticks % 5 == 0)
+            if (gameTime.TotalGameTime.Ticks % 3 == 0)
             {
                 Field.Update();
 
