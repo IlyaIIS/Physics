@@ -63,19 +63,22 @@ namespace GraphicsMG
                 /*
                 Tile tile = Field.Tiles[Field.Width / 2, Field.Height / 2];
                 Particle particle;
-                if (MyRandom.CheckChance(50))
+                if (tile.Particle == null)
                 {
-                    particle = new Water(tile);
-                    particle.SpeedX = 5;
-                    particle.SpeedY = -5;
+                    if (MyRandom.CheckChance(50))
+                    {
+                        particle = new Water(tile);
+                        particle.SpeedX = -5;
+                        particle.SpeedY = -5;
+                    }
+                    else
+                    {
+                        particle = new Sand(tile);
+                        particle.SpeedX = 5;
+                        particle.SpeedY = -5;
+                    }
+                    tile.Particle = particle;
                 }
-                else
-                {
-                    particle = new Sand(tile);
-                    particle.SpeedX = -5;
-                    particle.SpeedY = -5;
-                }
-                tile.Particle = particle;
                 //*/
             }
 

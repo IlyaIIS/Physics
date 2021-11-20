@@ -46,16 +46,28 @@ namespace Physics
                     if (nextTile.Particle != null)
                     {
                         Particle other = nextTile.Particle;
-                        if (false && other.GetType() == this.GetType() && (Math.Max(Math.Abs(SpeedX - other.SpeedX), Math.Abs(SpeedY - other.SpeedY)) > 20 * other.Density))
+                        double k = Weight > other.Weight ? 1 : 2;
+                        if (other.GetType() != this.GetType() && shift.Y > 0 && Fluidity < other.Fluidity &&
+                            40*k < (Math.Max(Math.Abs(SpeedX - other.SpeedX), Math.Abs(SpeedY - other.SpeedY)) * (Weight / other.Density) * (other.Fluidity / Fluidity)))
                         {
-                            other.Density++;
-                            Tile.Particle = null;
-                            Tile = null;
+                            if (nextTile.Particle.TryDisplace())
+                            {
+                                Tile.Particle = null;
+                            }
+                            else
+                            {
+                                Tile.Particle = nextTile.Particle;
+                                nextTile.Particle.Tile = Tile;
+                            }
+                            nextTile.Particle = this;
+                            Tile = nextTile;
 
                             double impulseX = SpeedX * (Weight / other.Weight) * 0.5 * Math.Abs(shift.X);
                             double impulseY = SpeedY * (Weight / other.Weight) * 0.5 * Math.Abs(shift.Y);
                             other.SpeedX += impulseX;
                             other.SpeedY += impulseY;
+                            SpeedX -= impulseX;
+                            SpeedY -= impulseY;
 
                             return;
                         }
@@ -87,9 +99,27 @@ namespace Physics
 
                 if (Math.Abs(InertiaX) > 1 || Math.Abs(InertiaY) > 1)
                     activeParticles.Push(this);
+
+                
             }
         }
+        private bool TryDisplace()
+        {
+            int[] neigNums = MyRandom.GetMixedArray(new int[4] { 0, 1, 2, 3 });
+            for (int i = 0; i < 4; i++)
+            {
+                Tile tile = Tile.Neigs[neigNums[i]];
+                if (tile.Particle == null && !tile.IsWall)
+                {
+                    Tile.Particle = null;
+                    tile.Particle = this;
+                    Tile = tile;
+                    return true;
+                }
+            }
 
+            return false;
+        }
         public void TrySpread()
         {
             if (Density > 1)
@@ -117,7 +147,7 @@ namespace Physics
                         return;
                     }
                 }
-                /*for (int i = 0; i < 4; i++)
+                for (int i = 0; i < 4; i++)
                 {
                     Tile tile = Tile.Neigs[neigNums[i]];
                     if (!tile.IsWall && tile.Particle != null)
@@ -125,8 +155,8 @@ namespace Physics
                         tile.Particle.SpeedX += 0.2 * ((-neigNums[i] + 1) % 2) * 0.25 * Weight;
                         tile.Particle.SpeedY += 0.2 * ((neigNums[i] - 2) % 2) * 0.25 * Weight;
                     }
-                }*/
-                for (int i = 0; i < 4; i++)
+                }
+                /*for (int i = 0; i < 4; i++)
                 {
                     Tile tile = Tile.Neigs[neigNums[i]];
                     if (!tile.IsWall && tile.Particle != null && tile.Particle.GetType() == GetType())
@@ -135,15 +165,26 @@ namespace Physics
                         Density--;
                         break;
                     }
-                }
+                }*/
             }
         }
+        
         public void Move(Field field)
         {
             SpeedY += field.G;
-            //SpeedX += MyRandom.GetNumRange(-3, 3d);
+            Fall();
             InertiaX += SpeedX;
             InertiaY += SpeedY;
+        }
+        private void Fall()
+        {
+            if (Tile.Neigs[3].Particle != null)
+            {
+                if (Tile.Neigs[0].Particle == null)
+                    SpeedX += Fluidity;
+                if (Tile.Neigs[2].Particle == null)
+                    SpeedX -= Fluidity;
+            }
         }
 
         public static Particle Create(Type type, Tile tile)
@@ -168,7 +209,7 @@ namespace Physics
         {
             Color = Color.Blue;
             Weight = 1;
-            Fluidity = 10;
+            Fluidity = 3;
         }
     }
     public class Sand : Particle
@@ -177,7 +218,7 @@ namespace Physics
         {
             Color = Color.Tan;
             Weight = 2;
-            Fluidity = 4;
+            Fluidity = 0.3;
         }
     }
     public class Dirt : Particle
@@ -186,7 +227,7 @@ namespace Physics
         {
             Color = Color.SandyBrown;
             Weight = 2;
-            Fluidity = 1;
+            Fluidity = 0.05;
         }
     }
 }

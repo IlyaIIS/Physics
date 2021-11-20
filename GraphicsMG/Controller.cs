@@ -38,6 +38,18 @@ namespace GraphicsMG
                 if (tile != null && !tile.IsWall && tile.Particle == null)
                 {
                     Particle particle;
+                    particle = new Sand(tile);
+                    particle.SpeedX = 0;
+                    particle.SpeedY = 0;
+                    tile.Particle = particle;
+                }
+            }
+            if (mouseState.RightButton == ButtonState.Pressed)
+            {
+                Tile tile = GetTileUnderMouse(field);
+                if (tile != null && !tile.IsWall && tile.Particle == null)
+                {
+                    Particle particle;
                     particle = new Dirt(tile);
                     particle.SpeedX = 0;
                     particle.SpeedY = 0;
