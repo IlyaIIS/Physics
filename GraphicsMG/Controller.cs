@@ -40,7 +40,7 @@ namespace GraphicsMG
                 if (tile != null && !tile.IsWall && tile.Particle == null)
                 {
                     Particle particle;
-                    particle = new Lava(tile);
+                    particle = new Sand(tile);
                     particle.SpeedX = 0;
                     particle.SpeedY = 0;
                     tile.Particle = particle;
@@ -52,7 +52,7 @@ namespace GraphicsMG
                 if (tile != null && !tile.IsWall && tile.Particle == null)
                 {
                     Particle particle;
-                    particle = new Water(tile);
+                    particle = new Dirt(tile);
                     particle.SpeedX = 0;
                     particle.SpeedY = 0;
                     tile.Particle = particle;

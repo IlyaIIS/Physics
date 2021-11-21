@@ -54,11 +54,7 @@ namespace Physics
                     if (nextTile.Particle != null)
                     {
                         Particle other = nextTile.Particle;
-                        double k = weight > other.weight ? 1 : 3;
-                        if (other.GetType() != this.GetType() && 
-                            shift.Y > 0 && 
-                            Fluidity < other.Fluidity &&
-                            40*k < (Math.Max(Math.Abs(SpeedX - other.SpeedX), Math.Abs(SpeedY - other.SpeedY)) * (Weight / other.Density) * (other.Fluidity / Fluidity)))
+                        if (other.GetType() != this.GetType() && shift.Y > 0 && Weight > other.Weight)
                         {
                             if (nextTile.Particle.TryDisplace())
                             {
@@ -183,14 +179,14 @@ namespace Physics
         {
             SpeedY += field.G * weight;
             Fall(field);
-            //Rub();
+            Rub();
             InertiaX += SpeedX;
             InertiaY += SpeedY;
         }
         private void Fall(Field field)
         {
             if (Math.Abs(SpeedX) < 2)
-                if (Tile.Neigs[3].Particle != null)
+                if (Tile.Neigs[3].Particle != null && Tile.Neigs[3].Particle.Weight >= Weight)
                 {
                     if (Tile.Neigs[0].Particle == null)
                         SpeedX += (Fluidity + MyRandom.GetNum0(Fluidity))*field.G/Weight;
@@ -389,6 +385,10 @@ namespace Physics
         }
         public override void DoAction()
         {
+            InertiaX = MyRandom.GetNumRange(-1, 1);
+            SpeedY *= 0.5;
+            if (MyRandom.Check(1000))
+                Temperature--;
             if (Temperature < 2)
             {
                 Particle newPart = new Water(Tile);
