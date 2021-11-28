@@ -16,10 +16,13 @@ namespace Physics
         public Tile Tile { get; set; }
         public int Density { get; protected set; } = 1;
         public double Roughness { get; protected set; }
+        public bool IsStatic { get; protected set; }
+        public double Elasticity { get; protected set; }
         public double SpeedX { get; set; }
         public double SpeedY { get; set; }
         public double InertiaX { get; protected set; }
         public double InertiaY { get; protected set; }
+        protected double tempDif;
         public int Temperature { get; set; } = 0;
 
         public Particle(Tile tile)
@@ -27,17 +30,13 @@ namespace Physics
             Tile = tile;
         }
 
-        virtual public void DoAction()
-        {
-
-        }
+        virtual public void DoAction() { }
 
         public void DefineMoving(ref Stack<Particle> activeParticles)
         {
-            if (Math.Abs(InertiaX) > 1 || Math.Abs(InertiaY) > 1)
-            {
-                activeParticles.Push(this);
-            }
+            if (!IsStatic)
+                if (Math.Abs(InertiaX) > 1 || Math.Abs(InertiaY) > 1)
+                    activeParticles.Push(this);
         }
         public void Shift(Stack<Particle> activeParticles, Field field)
         {
@@ -98,7 +97,7 @@ namespace Physics
                 }
                 else
                 {
-                    double elasticity = 0.0 * (field.Tiles[Tile.X, Tile.Y + shift.Y].IsWall ? 1 : -1);
+                    double elasticity = nextTile.Particle.Elasticity * (field.Tiles[Tile.X, Tile.Y + shift.Y].IsWall ? 1 : -1);
                     InertiaX *= shift.X == 0 ? 1 : elasticity;
                     InertiaY *= shift.Y == 0 ? 1 : -elasticity;
                     SpeedX *= shift.X == 0 ? 1 : elasticity;
@@ -183,218 +182,91 @@ namespace Physics
             InertiaX += SpeedX;
             InertiaY += SpeedY;
         }
-        private void Fall(Field field)
+        public void Fall(Field field)
         {
-            if (Math.Abs(SpeedX) < 2)
-                if (Tile.Neigs[3].Particle != null && Tile.Neigs[3].Particle.Weight >= Weight)
-                {
-                    if (Tile.Neigs[0].Particle == null)
-                        SpeedX += (Fluidity + MyRandom.GetNum0(Fluidity))*field.G/Weight;
-                    if (Tile.Neigs[2].Particle == null)
-                        SpeedX -= (Fluidity + MyRandom.GetNum0(Fluidity))*field.G/Weight;
-                }
+            if (!IsStatic)
+                if (Math.Abs(SpeedX) < 2)
+                    if (Tile.Neigs[3].Particle != null && Tile.Neigs[3].Particle.Weight >= Weight)
+                        if (Math.Abs(SpeedX) < 1)
+                        {
+                            if (Tile.Neigs[0].Particle == null || Tile.Neigs[0].Particle.Weight < Weight)
+                            {
+                                InertiaX += (Fluidity * 1.5 ) * field.G / Weight;
+                                SpeedX += ((Fluidity * 1.5) * field.G / Weight) / 10;
+                            }
+                            if (Tile.Neigs[2].Particle == null || Tile.Neigs[2].Particle.Weight < Weight)
+                            {
+                                InertiaX -= (Fluidity * 1.5) * field.G / Weight;
+                                SpeedX -= ((Fluidity * 1.5) * field.G / Weight) / 10;
+                            }
+                        }
         }
-        private void Rub()
+        public void Fall2(Field field)
         {
-            for (int i = 0; i < 4; i++)
-            {
-                Tile tile = Tile.Neigs[i];
-                Particle other = tile.Particle;
-                if (other != null)
-                {
-                    double k = 0.25 * other.Roughness;
-                    DoublePoint Impulse = new DoublePoint(SpeedX * k, SpeedY * k);
-                    other.SpeedX += Impulse.X;
-                    other.SpeedY += Impulse.Y;
-                    SpeedX -= Impulse.X;
-                    SpeedY -= Impulse.Y;
-                }
-            }
+            if (!IsStatic)
+                if (Math.Abs(SpeedX) < 2)
+                    if (Tile.Neigs[3].Particle != null && Tile.Neigs[3].Particle.Weight >= Weight)
+                        if (Math.Abs(SpeedX) < 1)
+                        {
+                            if (Tile.Neigs[0].Particle == null || Tile.Neigs[0].Particle.Weight < Weight)
+                            {
+                                InertiaX += (Fluidity + MyRandom.GetNum0(Fluidity)) * field.G / Weight;
+                                SpeedX += ((Fluidity + MyRandom.GetNum0(Fluidity)) * field.G / Weight) / 10;
+                            }
+                            if (Tile.Neigs[2].Particle == null || Tile.Neigs[2].Particle.Weight < Weight)
+                            {
+                                InertiaX -= (Fluidity + MyRandom.GetNum0(Fluidity)) * field.G / Weight;
+                                SpeedX -= ((Fluidity + MyRandom.GetNum0(Fluidity)) * field.G / Weight) / 10;
+                            }
+                        }
         }
-
-        public void SpreadTemperature()
+        public void Rub()
         {
-            foreach(Tile neig in Tile.Neigs)
-            {
-                Particle other = neig.Particle;
-                if (other != null)
+            if (!IsStatic)
+                for (int i = 0; i < 4; i++)
                 {
-                    if (Math.Abs(Temperature - other.Temperature) > MyRandom.GetNum0(5) && MyRandom.GetNum0(2d) < Conductivity*other.Conductivity*Math.Abs(Temperature - other.Temperature))
+                    Tile tile = Tile.Neigs[i];
+                    Particle other = tile.Particle;
+                    if (other != null)
                     {
-                        int dif = Math.Sign(Temperature - other.Temperature);
-                        Temperature -= dif;
-                        other.Temperature += dif;
+                        double k = 0.25 * other.Roughness;
+                        DoublePoint Impulse = new DoublePoint(SpeedX * k, SpeedY * k);
+                        other.SpeedX += Impulse.X;
+                        other.SpeedY += Impulse.Y;
+                        SpeedX -= Impulse.X;
+                        SpeedY -= Impulse.Y;
                     }
                 }
+        }
+        public void SpreadTemperature()
+        {
+            if (!Tile.IsEdge)
+                foreach (Tile neig in Tile.Neigs)
+                {
+                    Particle other = neig.Particle;
+                    if (other != null)
+                    {
+                        double dif = (Temperature - other.Temperature) * other.Conductivity/4;
+                        tempDif -= dif;
+                        other.tempDif += dif;
+                    }
+                }
+        }
+        public void ChangeTemperature()
+        {
+            if (!Tile.IsEdge)
+            {
+                int temp = (int)tempDif;
+                Temperature += temp;
+                tempDif -= temp;
             }
         }
 
         public static Particle Create(Type type, Tile tile)
         {
-            Particle output;
-            if (type == typeof(Water))
-                output = new Water(tile);
-            else if (type == typeof(Sand))
-                output = new Sand(tile);
-            else if (type == typeof(Dirt))
-                output = new Dirt(tile);
-            else
-                throw new Exception();
-
-            return output;
+            return (Particle)Activator.CreateInstance(type, tile);
         }
     }
 
-    public class Water : Particle
-    {
-        public Water(Tile tile) : base(tile)
-        {
-            Color = Color.Blue;
-            Weight = 1;
-            Fluidity = 3;
-            Roughness = 0.1;
-            Conductivity = 0.5;
-        }
-        public override void DoAction()
-        {
-            if (Temperature >= 3)
-            {
-                Particle newPart = new Steam(Tile);
-                Tile.Particle = newPart;
-                newPart.Temperature = Temperature;
-            }
-        }
-    }
-    public class Sand : Particle
-    {
-        public Sand(Tile tile) : base(tile)
-        {
-            Color = Color.Tan;
-            Weight = 2;
-            Fluidity = 0.3;
-            Roughness = 0.3;
-            Conductivity = 0.3;
-        }
-    }
-    public class Dirt : Particle
-    {
-        public Dirt(Tile tile) : base(tile)
-        {
-            Color = Color.SandyBrown;
-            Weight = 2;
-            Fluidity = 0.05;
-            Roughness = 0.5;
-            Conductivity = 0.5;
-        }
-    }
-    public class TNT : Particle
-    {
-        public TNT(Tile tile) : base(tile)
-        {
-            Color = Color.Red;
-            Weight = 4;
-            Fluidity = 0.0;
-            Roughness = 1;
-            Conductivity = 0.5;
-        }
-        override public void DoAction()
-        {
-            for (int i = 0; i < 4; i++)
-            {
-                if (Tile.Neigs[i].Particle != null && Tile.Neigs[i].Particle.GetType() != typeof(TNT) && !Tile.Neigs[i].IsWall)
-                {
-                    for (int j = 0; j < 4; j++)
-                    {
-                        if (!Tile.Neigs[j].IsWall)
-                        {
-                            foreach (Tile tile in Tile.Neigs[j].Neigs)
-                            {
-                                if (tile.Particle != null)
-                                {
-                                    tile.Particle.SpeedX += MyRandom.GetNumRange(-25, 25);
-                                    tile.Particle.SpeedY += MyRandom.GetNumRange(-25, 25);
-                                }
-                            }
-                            if (Tile.Neigs[j].Particle != null)
-                            {
-                                Tile.Neigs[j].Particle.SpeedX += MyRandom.GetNumRange(-25, 25);
-                                Tile.Neigs[j].Particle.SpeedY += MyRandom.GetNumRange(-25, 25);
-                            }
-                        }
-                    }
-                    Tile.Particle = null;
-                    Tile = null;
-                    return;
-                }
-            }
-        }
-    }
-    public class Lava : Particle
-    {
-        public Lava(Tile tile) : base(tile)
-        {
-            Color = Color.Orange;
-            Weight = 2;
-            Fluidity = 3;
-            Roughness = 0.5;
-            Conductivity = 0.5;
-
-            Temperature = 5;
-        }
-        public override void DoAction()
-        {
-            if (Temperature < 4)
-            {
-                Particle newPart = new Stone(Tile);
-                Tile.Particle = newPart;
-                newPart.Temperature = Temperature;
-            }
-        }
-    }
-    public class Stone : Particle
-    {
-        public Stone(Tile tile) : base(tile)
-        {
-            Color = Color.Gray;
-            Weight = 2;
-            Fluidity = 0.001;
-            Roughness = 0.5;
-            Conductivity = 0.3;
-        }
-        public override void DoAction()
-        {
-            if (Temperature >= 4)
-            {
-                Particle newPart = new Lava(Tile);
-                Tile.Particle = newPart;
-                newPart.Temperature = Temperature;
-            }
-        }
-    }
-    public class Steam : Particle
-    {
-        public Steam(Tile tile) : base(tile)
-        {
-            Color = Color.LightGray;
-            Weight = -0.5;
-            Fluidity = 2;
-            Roughness = 0.1;
-            Conductivity = 0.3;
-
-            Temperature = 3;
-        }
-        public override void DoAction()
-        {
-            InertiaX = MyRandom.GetNumRange(-1, 1);
-            SpeedY *= 0.5;
-            if (MyRandom.Check(1000))
-                Temperature--;
-            if (Temperature < 2)
-            {
-                Particle newPart = new Water(Tile);
-                Tile.Particle = newPart;
-                newPart.Temperature = Temperature;
-            }
-        }
-    }
+    
 }

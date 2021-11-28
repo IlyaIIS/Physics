@@ -15,15 +15,17 @@ namespace GraphicsMG
 
         static public SpriteFont Font { get; set; }
 
-        static public Dictionary<System.Drawing.Color, Microsoft.Xna.Framework.Color> GetConvertedColor = new Dictionary<System.Drawing.Color, Color>
+        static public Dictionary<Type, Microsoft.Xna.Framework.Color> GetConvertedColor = new Dictionary<Type, Color>
         {
-            {System.Drawing.Color.Blue, Color.Blue },
-            {System.Drawing.Color.SandyBrown, Color.SandyBrown },
-            {System.Drawing.Color.Tan, Color.Tan },
-            {System.Drawing.Color.Red, Color.Red },
-            {System.Drawing.Color.Orange, Color.DarkOrange },
-            {System.Drawing.Color.Gray, Color.Gray },
-            {System.Drawing.Color.LightGray, Color.LightGray },
+            {typeof(Water), Color.Blue },
+            {typeof(Dirt), Color.SandyBrown },
+            {typeof(Sand), Color.Tan },
+            {typeof(TNT), Color.Red },
+            {typeof(Lava), Color.DarkOrange },
+            {typeof(Stone), Color.Gray },
+            {typeof(Steam), Color.LightGray },
+            {typeof(Bedrock), Color.Gray },
+            {typeof(Cloner), Color.Pink },
         };
 
         static public void DrawLevel(SpriteBatch spriteBatch, Field field)
@@ -36,16 +38,8 @@ namespace GraphicsMG
         {
             foreach(Tile tile in field.Tiles)
             {
-                if (tile.IsWall)
-                    SpriteBatch.Draw(TileSp, new Vector2((float)tile.X, (float)tile.Y), Color.Gray);
-                else if (tile.Particle != null)
-                    SpriteBatch.Draw(TileSp, new Vector2((float)tile.X, (float)tile.Y), GetConvertedColor[tile.Particle.Color]);
-
-                /*if (!tile.IsLand)
-                    SpriteBatch.Draw(TileSp, new Vector2((float)tile.pX, (float)tile.pY), tile.Color[0].GetMGColor());
-                else
-                    SpriteBatch.Draw(TileSp, new Vector2((float)tile.pX, (float)tile.pY), tile.Color[Settings.MapMode].GetMGColor());
-                */
+                if (tile.Particle != null)
+                    SpriteBatch.Draw(TileSp, new Vector2((float)tile.X, (float)tile.Y), GetConvertedColor[tile.Particle.GetType()]);
             }
 
             //инфа от тайла под курсором

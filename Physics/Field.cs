@@ -31,10 +31,10 @@ namespace Physics
             foreach(Tile tile in Tiles)
             {
                 if (!tile.IsWall)
-                    if (MyRandom.CheckChance(20))
+                    if (MyRandom.CheckChance(40))
                         tile.Particle = new Water(tile);
-                    else if (MyRandom.CheckChance(20))
-                        tile.Particle = new Dirt(tile);
+                    else if (MyRandom.CheckChance(40))
+                        tile.Particle = new Lava(tile);
             }
             //*/
 
@@ -71,9 +71,8 @@ namespace Physics
             foreach (Tile tile in MyRandom.GetMixedArray(Tiles))
             {
                 if (tile.Particle != null)
-                {
                     tile.Particle.DefineMoving(ref activeParticles);
-                }
+                
             }
             while (activeParticles.Count > 0)
             {
@@ -92,13 +91,12 @@ namespace Physics
                     tile.Particle.TrySpread();
                 }
             }*/
-            foreach (Tile tile in Tiles)
+            
+            Parallel.ForEach(TilesArray, (tile) =>
             {
                 if (tile.Particle != null)
-                {
                     tile.Particle.Move(this);
-                }
-            }
+            });
             foreach (Tile tile in Tiles)
             {
                 if (tile.Particle != null)
@@ -112,12 +110,16 @@ namespace Physics
                 if (tile.Particle != null)
                     totalTemp += tile.Particle.Temperature;
             }
-            foreach (Tile tile in Tiles)
+            Parallel.ForEach(TilesArray, (tile) =>
             {
                 if (tile.Particle != null)
                     tile.Particle.SpreadTemperature();
-            }
-           
+            });
+            Parallel.ForEach(TilesArray, (tile) =>
+            {
+                if (tile.Particle != null)
+                    tile.Particle.ChangeTemperature();
+            });
         }
     }
 
@@ -128,7 +130,8 @@ namespace Physics
         public Tile[] Neigs { get; private set; } = new Tile[4];
         public bool IsWall { get; set; }
         public bool IsEdge { get; }
-        public Particle Particle { get; set; }
+        private Particle particle;
+        public Particle Particle { get { return particle; } set { particle = value; IsWall = value == null ? false : value.IsStatic; } }
 
         public Tile(int x, int y, bool isEdge)
         {
@@ -136,6 +139,7 @@ namespace Physics
             Y = y;
             IsEdge = isEdge;
             IsWall = isEdge;
+            particle = isEdge ? new Bedrock(this): null;
         }
 
         public void DefineNeigs(Tile[,] tiles)
